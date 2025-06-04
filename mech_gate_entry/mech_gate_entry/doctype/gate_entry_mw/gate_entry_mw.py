@@ -4,89 +4,134 @@
 import frappe
 from frappe.model.document import Document
 
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def document_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+	if filters.get('entry_type') == "Inward":
+		doctype_list = frappe.db.sql('''
+			SELECT tdt.name
+			FROM tabDocType tdt 
+			WHERE (tdt.module = 'Subcontracting' OR tdt.module = 'Buying')
+			AND tdt.istable = 0 
+			AND tdt.name LIKE  '%Order%';
+		''', debug=1)
+	
+	elif filters.get('entry_type') == 'Outward':
+		doctype_list = frappe.db.sql('''
+			SELECT tdt.name
+			FROM tabDocType tdt 
+			WHERE tdt.module = 'Stock'
+			AND tdt.istable = 0 
+			AND tdt.name IN  ('Delivery Note', 'Stock Entry', 'Purchase Receipt');
+		''')
+	return doctype_list
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def stock_entry_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+	stock_entries = frappe.db.sql(
+		'''
+            SELECT 
+                tse.name 
+            FROM 
+                `tabStock Entry` tse
+            WHERE 
+                tse.docstatus = 1 
+            AND 
+                tse.stock_entry_type = '{0}';
+        '''.format(filters.get('stock_entry_type')), {"txt": "%%%s%%" % txt}
+		)
+	return stock_entries
+
 class GateEntryMW(Document):
+	def validate(self):
+		self.validate_gate_qty()
+
+	def on_submit(self):
+		self.update_gate_qty_on_submit()
+
 	@frappe.whitelist()
 	def fetch_items(self):
 		if self.entry_type == "Inward":
-			purchase_order = self.purchase_order
-			po_doc = frappe.get_doc('Purchase Order', purchase_order)
+			document_type = self.document_type
+			document_name = self.document_name
 
-			if po_doc != None:
-				self.items = []
-				for item in po_doc.items:
-					self.append('items', {
-						'item_code' : item.item_code,
-						'item_name' : item.item_name,
-						'description' : item.description,
-						'quantity' : item.qty
-					})
-			
+			if document_type != None and document_name != None:
+				if document_type == "Purchase Order":
+					item_doc = frappe.get_doc("Purchase Order", document_name)
+				elif document_type == "Subcontracting Order":
+					item_doc = frappe.get_doc("Subcontracting Order", document_name)
+
+				if item_doc != None:
+					self.items = []
+					for item in item_doc.items:
+						self.append('items', {
+							'item_code' : item.item_code,
+							'item_name' : item.item_name,
+							'description' : item.description,
+							'original_qty' : item.qty,
+							'gate_entry_quantity': item.qty - item.custom_gate_entry_qty,
+							'hex_code' : item.name,
+							'prev_gate_entry_quantity' : item.custom_gate_entry_qty
+						})
+
 		elif self.entry_type == "Outward":
-			sales_order = self.sales_order
-			so_doc = frappe.get_doc('Sales Order', sales_order)
-			
-			if so_doc != None:
-				self.items = []
-				for item in so_doc.items:
-					self.append('items', {
-						'item_code' : item.item_code,
-						'item_name' : item.item_name,
-						'description' : item.description,
-						'quantity' : item.qty
-					})
+			if self.entry_type == "Outward":
+				document_type = self.document_type
+				document_name = self.document_name
 
+				if document_type != None and document_name != None:
+					if document_type == "Delivery Note":
+						item_doc = frappe.get_doc("Delivery Note", document_name)
+					elif document_type == "Purchase Receipt":
+						item_doc = frappe.get_doc("Purchase Receipt", document_name)
+					elif document_type == "Stock Entry": 
+						item_doc = frappe.get_doc("Stock Entry", document_name)
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def supplier_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
-	suppliers = frappe.db.sql(
-				'''
-					SELECT DISTINCT(tpo.supplier)
-					FROM `tabPurchase Order` tpo 
-					WHERE tpo.docstatus = 1 AND supplier like %(txt)s AND tpo.name NOT IN (SELECT purchase_order FROM `tabGate Entry MW` tgem WHERE tgem.entry_type = "Inward");
-				''', {"txt": "%%%s%%" % txt})
-	return suppliers
+					if item_doc != None:
+						self.items = []
+						for item in item_doc.items:
+							self.append('items', {
+								'item_code' : item.item_code,
+								'item_name' : item.item_name if item.item_name != None else " ",
+								'description' : item.description,
+								'original_qty' : item.qty,
+								'gate_entry_quantity': item.qty - item.custom_gate_entry_qty,
+								'hex_code' : item.name,
+								'prev_gate_entry_quantity' : item.custom_gate_entry_qty
+							})
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def purchase_order_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
-	purchaseOrders = frappe.db.sql(
-				'''
-					SELECT 
-						tpo.name 
-					FROM 
-						`tabPurchase Order` tpo
-					WHERE 
-						tpo.docstatus = 1 
-					AND 
-						tpo.supplier = '{0}' AND name like %(txt)s  AND tpo.name NOT IN (SELECT tgem.purchase_order FROM `tabGate Entry MW` tgem WHERE tgem.entry_type = "Inward")
-				'''.format(filters.get('supplier')),  {"txt": "%%%s%%" % txt})
-	return purchaseOrders
+	def validate_gate_qty(self):
+		if self.items != None and self.document_type != None and self.document_name != None:
+			for item in self.items:
+				if item.hex_code != None:
+					curr_gate_qty = item.gate_entry_quantity
+					curr_prev_gate_qty = item.prev_gate_entry_quantity
+					curr_org_qty = item.original_qty
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def customer_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
-	customers = frappe.db.sql(
-				'''
-					SELECT DISTINCT(tso.customer)
-					FROM `tabSales Order` tso 
-					WHERE tso.docstatus = 1 AND customer like %(txt)s AND tso.name NOT IN (SELECT sales_order FROM `tabGate Entry MW` tgem WHERE tgem.entry_type = "Outward");
-				''',{"txt": "%%%s%%" % txt})
-	return customers
+					if (curr_gate_qty > (curr_org_qty - curr_prev_gate_qty)):
+						frappe.throw(f"Current Gate Entry Qty Should Be Less Than Remaining Qty For Item {frappe.bold(item.item_code)}")
 
+	def update_gate_qty_on_submit(self):
+		document_type = self.document_type
+		if document_type != None:
+			if document_type == "Purchase Order":
+				child_doc = "Purchase Order Item"
+			elif document_type == "Subcontracting Order":
+				child_doc = "Subcontracting Order Item"
+			elif document_type == "Delivery Note":
+				child_doc = "Delivery Note Item"
+			elif document_type == "Purchase Receipt":
+				child_doc = "Purchase Receipt Item"
+			elif document_type == "Stock Entry":
+				child_doc = "Stock Entry Detail"
 
-@frappe.whitelist()
-@frappe.validate_and_sanitize_search_inputs
-def sales_order_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
-	salesOrders = frappe.db.sql(
-		'''
-			SELECT 
-				tso.name 
-			FROM 
-				`tabSales Order` tso
-			WHERE 
-				tso.docstatus = 1 
-			AND 
-				tso.customer = '{0}' AND tso.name NOT IN (SELECT tgem.sales_order FROM `tabGate Entry MW` tgem WHERE tgem.entry_type = "Outward");
-		'''.format(filters.get('customer')), {"txt": "%%%s%%" % txt})
-	return salesOrders
+			for item in self.items:
+				if item.hex_code != None:
+					prev_ge_qty = frappe.db.get_value(child_doc, item.hex_code, 'custom_gate_entry_qty')
+					curr_ge_qty = item.gate_entry_quantity
+					
+					total_ge_qty = prev_ge_qty + curr_ge_qty
+					frappe.db.set_value(child_doc, item.hex_code, 'custom_gate_entry_qty', total_ge_qty)
+				

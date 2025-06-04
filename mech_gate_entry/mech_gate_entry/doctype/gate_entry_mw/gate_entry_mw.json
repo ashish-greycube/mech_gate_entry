@@ -7,14 +7,39 @@
  "engine": "InnoDB",
  "field_order": [
   "entry_type",
-  "supplier",
-  "purchase_order",
-  "customer",
-  "sales_order",
+  "stock_entry_type",
+  "column_break_ynzt",
+  "document_type",
+  "document_name",
+  "section_break_mpkx",
+  "party_name",
+  "party_code",
+  "dc_number",
+  "dc_date",
+  "bill_no",
+  "bill_date",
+  "driver_name",
+  "mobile_no",
+  "eway_bill_no",
+  "eway_bill_date",
+  "po_number",
+  "column_break_bcob",
+  "series",
+  "gin_no",
+  "gin_date",
+  "status",
+  "inout_time",
+  "user_name",
+  "vehicle_no",
+  "vehicle_type",
+  "lr_no",
+  "lr_date",
+  "transporter_name",
   "section_break_aoj2",
   "items",
   "approval_status",
-  "remark"
+  "remark",
+  "amended_from"
  ],
  "fields": [
   {
@@ -22,34 +47,6 @@
    "fieldtype": "Select",
    "label": "Entry Type",
    "options": "\nInward\nOutward"
-  },
-  {
-   "depends_on": "eval:doc.entry_type == \"Inward\"",
-   "fieldname": "supplier",
-   "fieldtype": "Link",
-   "label": "Supplier",
-   "options": "Supplier"
-  },
-  {
-   "depends_on": "eval:doc.entry_type == \"Inward\"",
-   "fieldname": "purchase_order",
-   "fieldtype": "Link",
-   "label": "Purchase Order",
-   "options": "Purchase Order"
-  },
-  {
-   "depends_on": "eval:doc.entry_type == \"Outward\"",
-   "fieldname": "customer",
-   "fieldtype": "Link",
-   "label": "Customer",
-   "options": "Customer"
-  },
-  {
-   "depends_on": "eval:doc.entry_type == \"Outward\"",
-   "fieldname": "sales_order",
-   "fieldtype": "Link",
-   "label": "Sales Order",
-   "options": "Sales Order"
   },
   {
    "fieldname": "section_break_aoj2",
@@ -74,12 +71,168 @@
    "fieldtype": "Small Text",
    "label": "Remark",
    "mandatory_depends_on": "eval:doc.approval_status == \"Rejected\""
+  },
+  {
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "label": "Document Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "document_name",
+   "fieldtype": "Dynamic Link",
+   "label": "Document Name",
+   "options": "document_type"
+  },
+  {
+   "fieldname": "column_break_ynzt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "party_name",
+   "fieldtype": "Data",
+   "label": "Party Name"
+  },
+  {
+   "depends_on": "eval:doc.document_type == \"Stock Entry\"",
+   "fieldname": "stock_entry_type",
+   "fieldtype": "Select",
+   "label": "Stock Entry Type",
+   "mandatory_depends_on": "eval:doc.document_type == \"Stock Entry\"",
+   "options": "\nMaterial Issue\nMaterial Transfer\nSend to Subcontractor"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_mpkx",
+   "fieldtype": "Section Break",
+   "label": "Additional Fields"
+  },
+  {
+   "fieldname": "driver_name",
+   "fieldtype": "Data",
+   "label": "Driver Name"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Gate Entry MW",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "party_code",
+   "fieldtype": "Data",
+   "label": "Party Code"
+  },
+  {
+   "fieldname": "dc_number",
+   "fieldtype": "Data",
+   "label": "DC Number"
+  },
+  {
+   "fieldname": "dc_date",
+   "fieldtype": "Data",
+   "label": "DC Date"
+  },
+  {
+   "fieldname": "bill_no",
+   "fieldtype": "Data",
+   "label": "Bill No"
+  },
+  {
+   "fieldname": "bill_date",
+   "fieldtype": "Data",
+   "label": "Bill Date"
+  },
+  {
+   "fieldname": "mobile_no",
+   "fieldtype": "Data",
+   "label": "Mobile No"
+  },
+  {
+   "fieldname": "eway_bill_no",
+   "fieldtype": "Data",
+   "label": "EWay Bill No"
+  },
+  {
+   "fieldname": "eway_bill_date",
+   "fieldtype": "Data",
+   "label": "EWay Bill Date"
+  },
+  {
+   "fieldname": "po_number",
+   "fieldtype": "Data",
+   "label": "PO Number"
+  },
+  {
+   "fieldname": "column_break_bcob",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "\nGE-{DD}{MM}{YY}-{##}"
+  },
+  {
+   "fieldname": "gin_no",
+   "fieldtype": "Data",
+   "label": "GIN No"
+  },
+  {
+   "fieldname": "gin_date",
+   "fieldtype": "Date",
+   "label": "GIN Date"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Data",
+   "label": "Status"
+  },
+  {
+   "fieldname": "inout_time",
+   "fieldtype": "Time",
+   "label": "In/Out Time"
+  },
+  {
+   "fieldname": "user_name",
+   "fieldtype": "Data",
+   "label": "User Name"
+  },
+  {
+   "fieldname": "vehicle_no",
+   "fieldtype": "Data",
+   "label": "Vehicle No"
+  },
+  {
+   "fieldname": "vehicle_type",
+   "fieldtype": "Data",
+   "label": "Vehicle Type"
+  },
+  {
+   "fieldname": "lr_no",
+   "fieldtype": "Data",
+   "label": "LR No"
+  },
+  {
+   "fieldname": "lr_date",
+   "fieldtype": "Data",
+   "label": "LR Date"
+  },
+  {
+   "fieldname": "transporter_name",
+   "fieldtype": "Data",
+   "label": "Transporter Name"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2025-05-08 09:46:24.271775",
+ "modified": "2025-06-03 13:10:36.792847",
  "modified_by": "Administrator",
  "module": "Mech Gate Entry",
  "name": "Gate Entry MW",

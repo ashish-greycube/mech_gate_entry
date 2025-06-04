@@ -79,6 +79,13 @@ app_license = "mit"
 # 	"filters": "mech_gate_entry.utils.jinja_filters"
 # }
 
+# After Migration
+# ------------
+after_migrate = [
+    'mech_gate_entry.migrate.after_migrate'
+]
+
+
 # Installation
 # ------------
 
