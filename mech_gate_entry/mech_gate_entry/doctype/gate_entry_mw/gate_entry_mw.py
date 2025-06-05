@@ -33,16 +33,129 @@ def stock_entry_query(doctype, txt, searchfield, start, page_len, filters, as_di
 	stock_entries = frappe.db.sql(
 		'''
             SELECT 
-                tse.name 
-            FROM 
-                `tabStock Entry` tse
-            WHERE 
-                tse.docstatus = 1 
-            AND 
-                tse.stock_entry_type = '{0}';
+				IF(SUM(tsed.qty) != SUM(tsed.custom_gate_entry_qty), tse.name, NULL)
+			FROM 
+				`tabStock Entry` tse
+			INNER JOIN 
+				`tabStock Entry Detail` tsed 
+			ON 
+				tse.name = tsed.parent
+			WHERE
+				tse.stock_entry_type = '{0}' AND tse.docstatus = 1 AND tse.name like %(txt)s
+			GROUP BY 
+				(tse.name);
         '''.format(filters.get('stock_entry_type')), {"txt": "%%%s%%" % txt}
 		)
-	return stock_entries
+	entries = []
+	for se in stock_entries:
+		if None not in se:
+			entries.append(se)
+	return entries
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def delivery_note_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+	dn_entries = frappe.db.sql(
+		'''
+            SELECT 
+				IF(SUM(tdni.qty) != SUM(tdni.custom_gate_entry_qty), tdn.name, NULL)
+			FROM 
+				`tabDelivery Note` tdn 
+			INNER JOIN 
+				`tabDelivery Note Item` tdni 
+			ON 
+				tdn.name = tdni.parent
+			WHERE 
+				tdn.docstatus = 1 AND tdn.name like %(txt)s
+			GROUP BY 
+				(tdn.name);
+        ''', {"txt": "%%%s%%" % txt}
+		)
+	entries = []
+	for dn in dn_entries:
+		if None not in dn:
+			entries.append(dn)
+	return entries
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def purchase_receipt_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+	pr_entries = frappe.db.sql(
+		'''
+           SELECT 
+				IF(SUM(tpri.qty) != SUM(tpri.custom_gate_entry_qty), tpr.name, NULL)
+			FROM 
+			`tabPurchase Receipt` tpr 
+			INNER JOIN 
+				`tabPurchase Receipt Item` tpri 
+			ON 
+				tpr.name = tpri.parent
+			WHERE 
+				tpr.docstatus = 1 AND tpr.is_return = 1 AND tpr.name like %(txt)s
+			GROUP BY 
+				(tpr.name);
+        ''', {"txt": "%%%s%%" % txt}
+		)
+	entries = []
+	for pr in pr_entries:
+		if None not in pr:
+			entries.append(pr)
+	return entries
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def purchase_order_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+	po_entries = frappe.db.sql(
+		'''
+           SELECT 
+				IF(SUM(tpoi.qty) != SUM(tpoi.custom_gate_entry_qty), tpo.name, NULL)
+			FROM 
+			`tabPurchase Order` tpo 
+			INNER JOIN 
+				`tabPurchase Order Item` tpoi 
+			ON 
+				tpo.name = tpoi.parent
+			WHERE 
+				tpo.docstatus = 1 AND tpo.name like %(txt)s
+			GROUP BY 
+				(tpo.name);
+        ''', {"txt": "%%%s%%" % txt}
+		)
+	entries = []
+	for po in po_entries:
+		if None not in po:
+			entries.append(po)
+	return entries
+
+
+@frappe.whitelist()
+@frappe.validate_and_sanitize_search_inputs
+def subcontracting_query(doctype, txt, searchfield, start, page_len, filters, as_dict=False):
+	sc_entries = frappe.db.sql(
+		'''
+           	SELECT 
+				IF(SUM(tsoi.qty) != SUM(tsoi.custom_gate_entry_qty), tso.name, NULL)
+			FROM 
+			`tabSubcontracting Order` tso 
+			INNER JOIN 
+				`tabSubcontracting Order Item` tsoi 
+			ON 
+				tso.name = tsoi.parent
+			WHERE 
+				tso.docstatus = 1
+			GROUP BY 
+				(tso.name);
+        ''', {"txt": "%%%s%%" % txt}
+		)
+	entries = []
+	for sc in sc_entries:
+		if None not in sc:
+			entries.append(sc)
+	return entries
+
 
 class GateEntryMW(Document):
 	def validate(self):
@@ -50,6 +163,9 @@ class GateEntryMW(Document):
 
 	def on_submit(self):
 		self.update_gate_qty_on_submit()
+
+	def on_cancel(self):
+		self.update_gate_entry_on_cancel()
 
 	@frappe.whitelist()
 	def fetch_items(self):
@@ -134,4 +250,25 @@ class GateEntryMW(Document):
 					
 					total_ge_qty = prev_ge_qty + curr_ge_qty
 					frappe.db.set_value(child_doc, item.hex_code, 'custom_gate_entry_qty', total_ge_qty)
-				
+	
+	def update_gate_entry_on_cancel(self):
+		document_type = self.document_type
+		if document_type != None:
+			if document_type == "Purchase Order":
+				child_doc = "Purchase Order Item"
+			elif document_type == "Subcontracting Order":
+				child_doc = "Subcontracting Order Item"
+			elif document_type == "Delivery Note":
+				child_doc = "Delivery Note Item"
+			elif document_type == "Purchase Receipt":
+				child_doc = "Purchase Receipt Item"
+			elif document_type == "Stock Entry":
+				child_doc = "Stock Entry Detail"	
+
+			for item in self.items:
+				if item.hex_code != None:
+					prev_ge_qty = frappe.db.get_value(child_doc, item.hex_code, 'custom_gate_entry_qty')
+					curr_ge_qty = item.gate_entry_quantity
+					
+					updated_ge_qty = prev_ge_qty - curr_ge_qty
+					frappe.db.set_value(child_doc, item.hex_code, 'custom_gate_entry_qty', updated_ge_qty)

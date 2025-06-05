@@ -67,6 +67,7 @@
   {
    "fieldname": "hex_code",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "HEX Code",
    "read_only": 1
   }
@@ -75,7 +76,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-06-03 13:29:36.664268",
+ "modified": "2025-06-05 11:42:42.621088",
  "modified_by": "Administrator",
  "module": "Mech Gate Entry",
  "name": "GE Item Details MW",

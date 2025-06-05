@@ -14,6 +14,7 @@ def after_migrate():
                 'is_system_generated' : 0,
                 'allow_on_submit' : 1,
                 'insert_after' : 'stock_qty',
+                'read_only' : 1,
             }
         ], 
 
@@ -26,6 +27,7 @@ def after_migrate():
                 'is_system_generated' : 0,
                 'allow_on_submit' : 1,
                 'insert_after' : 'conversion_factor',
+                'read_only' : 1,
             }
         ],
 
@@ -38,6 +40,7 @@ def after_migrate():
                 'is_system_generated' : 0,
                 'allow_on_submit' : 1,
                 'insert_after' : 'sample_quantity',
+                'read_only' : 1,
             }
         ],
 
@@ -50,6 +53,7 @@ def after_migrate():
                 'is_system_generated' : 0,
                 'allow_on_submit' : 1,
                 'insert_after' : 'returned_qty',
+                'read_only' : 1,
             }
         ],
 
@@ -62,6 +66,7 @@ def after_migrate():
                 'is_system_generated' : 0,
                 'allow_on_submit' : 1,
                 'insert_after' : 'sample_quantity',
+                'read_only' : 1,
             }
         ]
     }

@@ -29,16 +29,25 @@ frappe.ui.form.on("Gate Entry MW", {
 
             if (frm.doc.document_type == "Purchase Receipt") {
                 return {
-                    filters: {
-                        'is_return' : 1,
-                        'docstatus' : 1
-                    }
+                    query: 'mech_gate_entry.mech_gate_entry.doctype.gate_entry_mw.gate_entry_mw.purchase_receipt_query',
                 }
             }
 
-            return {
-                filters: {
-                    'docstatus' : 1
+            if (frm.doc.document_type == "Delivery Note") {
+                return {
+                    query: 'mech_gate_entry.mech_gate_entry.doctype.gate_entry_mw.gate_entry_mw.delivery_note_query',
+                }
+            }
+
+            if (frm.doc.document_type == "Purchase Order") {
+                return {
+                    query: 'mech_gate_entry.mech_gate_entry.doctype.gate_entry_mw.gate_entry_mw.purchase_order_query',
+                }
+            }
+
+            if (frm.doc.document_type == "Subcontracting Order") {
+                return {
+                    query: 'mech_gate_entry.mech_gate_entry.doctype.gate_entry_mw.gate_entry_mw.subcontracting_query',
                 }
             }
         })  
