@@ -33,7 +33,7 @@ def stock_entry_query(doctype, txt, searchfield, start, page_len, filters, as_di
 	stock_entries = frappe.db.sql(
 		'''
             SELECT 
-				IF(SUM(tsed.qty) != SUM(tsed.custom_gate_entry_qty), tse.name, NULL)
+				IF(SUM(tsed.qty) != SUM(tsed.custom_gate_entry_qty), tse.name, NULL), tse.posting_date
 			FROM 
 				`tabStock Entry` tse
 			INNER JOIN 
@@ -59,7 +59,7 @@ def delivery_note_query(doctype, txt, searchfield, start, page_len, filters, as_
 	dn_entries = frappe.db.sql(
 		'''
             SELECT 
-				IF(SUM(tdni.qty) != SUM(tdni.custom_gate_entry_qty), tdn.name, NULL)
+				IF(SUM(tdni.qty) != SUM(tdni.custom_gate_entry_qty), tdn.name, NULL), tdn.customer, tdn.posting_date
 			FROM 
 				`tabDelivery Note` tdn 
 			INNER JOIN 
@@ -85,7 +85,7 @@ def purchase_receipt_query(doctype, txt, searchfield, start, page_len, filters, 
 	pr_entries = frappe.db.sql(
 		'''
            SELECT 
-				IF(SUM(tpri.qty) != SUM(tpri.custom_gate_entry_qty), tpr.name, NULL)
+				IF(SUM(tpri.qty) != SUM(tpri.custom_gate_entry_qty), tpr.name, NULL), tpr.supplier, tpr.posting_date
 			FROM 
 			`tabPurchase Receipt` tpr 
 			INNER JOIN 
@@ -111,7 +111,7 @@ def purchase_order_query(doctype, txt, searchfield, start, page_len, filters, as
 	po_entries = frappe.db.sql(
 		'''
            SELECT 
-				IF(SUM(tpoi.qty) != SUM(tpoi.custom_gate_entry_qty), tpo.name, NULL)
+				IF(SUM(tpoi.qty) != SUM(tpoi.custom_gate_entry_qty), tpo.name, NULL), tpo.supplier, tpo.transaction_date
 			FROM 
 			`tabPurchase Order` tpo 
 			INNER JOIN 
@@ -137,7 +137,7 @@ def subcontracting_query(doctype, txt, searchfield, start, page_len, filters, as
 	sc_entries = frappe.db.sql(
 		'''
            	SELECT 
-				IF(SUM(tsoi.qty) != SUM(tsoi.custom_gate_entry_qty), tso.name, NULL)
+				IF(SUM(tsoi.qty) != SUM(tsoi.custom_gate_entry_qty), tso.name, NULL), tso.supplier, tso.transaction_date
 			FROM 
 			`tabSubcontracting Order` tso 
 			INNER JOIN 
@@ -176,8 +176,10 @@ class GateEntryMW(Document):
 			if document_type != None and document_name != None:
 				if document_type == "Purchase Order":
 					item_doc = frappe.get_doc("Purchase Order", document_name)
+					self.supplier = frappe.db.get_value('Purchase Order', document_name, 'supplier')
 				elif document_type == "Subcontracting Order":
 					item_doc = frappe.get_doc("Subcontracting Order", document_name)
+					self.supplier = frappe.db.get_value('Subcontracting Order', document_name, 'supplier')
 
 				if item_doc != None:
 					self.items = []
@@ -200,8 +202,10 @@ class GateEntryMW(Document):
 				if document_type != None and document_name != None:
 					if document_type == "Delivery Note":
 						item_doc = frappe.get_doc("Delivery Note", document_name)
+						self.customer = frappe.db.get_value('Delivery Note', document_name, 'customer')
 					elif document_type == "Purchase Receipt":
 						item_doc = frappe.get_doc("Purchase Receipt", document_name)
+						self.supplier = frappe.db.get_value('Purchase Receipt', document_name, 'supplier')
 					elif document_type == "Stock Entry": 
 						item_doc = frappe.get_doc("Stock Entry", document_name)
 
