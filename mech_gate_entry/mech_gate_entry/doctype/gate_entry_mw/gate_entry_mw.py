@@ -230,8 +230,12 @@ class GateEntryMW(Document):
 					curr_prev_gate_qty = item.prev_gate_entry_quantity
 					curr_org_qty = item.original_qty
 
-					if (curr_gate_qty > (curr_org_qty - curr_prev_gate_qty)):
-						frappe.throw(f"Current Gate Entry Qty Should Be Less Than Remaining Qty For Item {frappe.bold(item.item_code)}")
+					if 	self.document_type == "Purchase Receipt":
+						if (curr_gate_qty < (curr_org_qty - curr_prev_gate_qty)):
+							frappe.throw("Current Gate Entry Qty Should Be Less Than Remaining Qty For Item {0}".format(frappe.bold(item.item_code)))
+					else:
+						if (curr_gate_qty > (curr_org_qty - curr_prev_gate_qty)):
+							frappe.throw("Current Gate Entry Qty Should Be Less Than Remaining Qty For Item {0}".format(frappe.bold(item.item_code)))
 
 	def update_gate_qty_on_submit(self):
 		document_type = self.document_type
