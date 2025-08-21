@@ -236,7 +236,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-20 17:07:02.088103",
+ "modified": "2025-08-20 17:50:15.023679",
  "modified_by": "Administrator",
  "module": "Mech Gate Entry",
  "name": "Gate Entry MW",
@@ -276,6 +276,7 @@
   }
  ],
  "row_format": "Dynamic",
+ "search_fields": "supplier, customer",
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": []

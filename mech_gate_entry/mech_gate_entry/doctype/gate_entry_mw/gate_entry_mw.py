@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe.utils import get_link_to_form
 from frappe.model.document import Document
 
 @frappe.whitelist()
@@ -183,16 +184,22 @@ class GateEntryMW(Document):
 
 				if item_doc != None:
 					self.items = []
+					stock_item_count = 0
 					for item in item_doc.items:
-						self.append('items', {
-							'item_code' : item.item_code,
-							'item_name' : item.item_name,
-							'description' : item.description,
-							'original_qty' : item.qty,
-							'gate_entry_quantity': item.qty - item.custom_gate_entry_qty,
-							'hex_code' : item.name,
-							'prev_gate_entry_quantity' : item.custom_gate_entry_qty
-						})
+						is_stock_item = frappe.db.get_value("Item", item.item_code, 'is_stock_item')
+						if is_stock_item == 1:
+							stock_item_count = stock_item_count + 1
+							self.append('items', {
+								'item_code' : item.item_code,
+								'item_name' : item.item_name,
+								'description' : item.description,
+								'original_qty' : item.qty,
+								'gate_entry_quantity': item.qty - item.custom_gate_entry_qty,
+								'hex_code' : item.name,
+								'prev_gate_entry_quantity' : item.custom_gate_entry_qty
+							})
+					if stock_item_count == 0:
+						frappe.throw("No Stock Item Is Available In Corresponding {0} {1}".format(document_type, get_link_to_form(document_type,document_name)))
 
 		elif self.entry_type == "Outward":
 			if self.entry_type == "Outward":
@@ -211,16 +218,23 @@ class GateEntryMW(Document):
 
 					if item_doc != None:
 						self.items = []
+						stock_item_count = 0
 						for item in item_doc.items:
-							self.append('items', {
-								'item_code' : item.item_code,
-								'item_name' : item.item_name if item.item_name != None else " ",
-								'description' : item.description,
-								'original_qty' : item.qty,
-								'gate_entry_quantity': item.qty - item.custom_gate_entry_qty,
-								'hex_code' : item.name,
-								'prev_gate_entry_quantity' : item.custom_gate_entry_qty
-							})
+							is_stock_item = frappe.db.get_value("Item", item.item_code, 'is_stock_item')
+							if is_stock_item == 1:
+								stock_item_count = stock_item_count + 1
+								self.append('items', {
+									'item_code' : item.item_code,
+									'item_name' : item.item_name if item.item_name != None else " ",
+									'description' : item.description,
+									'original_qty' : item.qty,
+									'gate_entry_quantity': item.qty - item.custom_gate_entry_qty,
+									'hex_code' : item.name,
+									'prev_gate_entry_quantity' : item.custom_gate_entry_qty
+								})
+						
+						if stock_item_count == 0:
+							frappe.throw("No Stock Item Is Available In Corresponding {0} {1}".format(document_type, get_link_to_form(document_type,document_name)))
 
 	def validate_gate_qty(self):
 		if self.items != None and self.document_type != None and self.document_name != None:
