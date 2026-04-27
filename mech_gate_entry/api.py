@@ -12,5 +12,5 @@ def fetch_supplier_delivery_no_and_date_from_gate_entry(gate_entry_no):
 
     return {
         "bill_no": id,
-        "bill_date": frappe.utils.getdate(date).strftime("%Y-%d-%m")
+        "bill_date": frappe.utils.getdate(date.replace("/", "-"))
     }
